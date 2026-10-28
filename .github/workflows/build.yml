@@ -1,5 +1,6 @@
 
 
+
 name: Build StrengthSMP
 
 on:
@@ -20,21 +21,30 @@ jobs:
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: 'temurin'
           java-version: '21'
-          cache: maven
+
+      - name: Verify Java
+        run: java -version
 
       - name: Extract source ZIP
         run: |
           mkdir -p source
           unzip -o StrengthSMP-GitHub-Build.zip -d source
-          find source -name pom.xml -print
 
-      - name: Build plugin
+      - name: Find Maven project
+        id: project
         run: |
           POM=$(find source -name pom.xml -print -quit)
-          test -n "$POM" || { echo "pom.xml tidak ditemukan"; exit 1; }
-          cd "$(dirname "$POM")"
+          if [ -z "$POM" ]; then
+            echo "ERROR: pom.xml tidak ditemukan dalam ZIP!"
+            exit 1
+          fi
+          echo "pom=$POM" >> "$GITHUB_OUTPUT"
+
+      - name: Build plugin with Maven
+        run: |
+          cd "$(dirname "${{ steps.project.outputs.pom }}")"
           mvn -B clean package
 
       - name: Upload plugin JAR
